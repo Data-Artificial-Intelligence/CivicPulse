@@ -1,0 +1,3 @@
+# Core Data Engineering & Orchestration
+dbt-core==1.7.13
+dbt-duckdb==1.7.1
