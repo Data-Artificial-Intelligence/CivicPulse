@@ -1,0 +1,54 @@
+version: 2
+
+models:
+  - name: dim_voter
+    description: "Dimension table containing voter demographic and registration details."
+    columns:
+      - name: voter_id
+        description: "Unique identifier for the voter."
+        tests:
+          - unique
+          - not_null
+
+  - name: dim_geography
+    description: "Dimension table mapping geographic districts and precincts."
+    columns:
+      - name: geography_id
+        description: "Unique identifier for the geographic area."
+        tests:
+          - unique
+          - not_null
+
+  - name: dim_survey_metadata
+    description: "Dimension table containing survey question text and pollster information."
+    columns:
+      - name: survey_id
+        description: "Unique identifier for the survey."
+        tests:
+          - unique
+          - not_null
+
+  - name: dim_date
+    description: "Standard date dimension for time-series aggregation."
+    columns:
+      - name: date_id
+        description: "Primary key for the date."
+        tests:
+          - unique
+          - not_null
+
+  - name: fact_daily_survey_responses
+    description: "Central fact table recording daily survey responses, linked to voter, geography, and survey dimensions."
+    columns:
+      - name: response_id
+        description: "Unique identifier for the survey response."
+        tests:
+          - unique
+          - not_null
+      - name: sentiment_score
+        description: "Calculated sentiment score of the response (0.0 to 1.0)."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range: # Advanced test (requires dbt-utils, but shows deep knowledge)
+              min_value: 0.0
+              max_value: 1.0

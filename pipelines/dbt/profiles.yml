@@ -1,0 +1,7 @@
+civic_pulse:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: 'civic_pulse.duckdb'
+      threads: 4
