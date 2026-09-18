@@ -1,0 +1,53 @@
+﻿# Python
+__pycache__/
+*.py[cod]
+*.pyc
+*.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+build/
+dist/
+*.egg-info/
+
+# Environment Variables & Secrets
+.env
+.env.*
+*.pem
+aws_credentials.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data & Logs
+data/
+logs/
+*.csv
+*.parquet
+*.duckdb
+
+# Terraform (CRITICAL: Never commit these)
+.terraform/
+*.tfstate
+*.tfstate.backup
+.terraform.lock.hcl
+
+# dbt
+target/
+dbt_packages/
+logs/
+.user.yml
+
+# Helper scripts
+Codebase.md
+Generate-Codebook-TIMSAdvantaged.ps1
