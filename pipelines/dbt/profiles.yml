@@ -1,7 +1,16 @@
+# civic_pulse:
+#   target: dev
+#   outputs:
+#     dev:
+#       type: duckdb
+#       path: /opt/airflow/dbt/civic_pulse.duckdb
+#       threads: 4
+
+
 civic_pulse:
   target: dev
   outputs:
     dev:
       type: duckdb
-      path: 'civic_pulse.duckdb'
+      path: 'civic_pulse.duckdb'  # <-- CHANGE THIS BACK to a relative path
       threads: 4
