@@ -2,9 +2,9 @@ name: CivicPulse CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ develop, main, master ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ develop, main, master ]
 
 jobs:
   lint-and-test:
