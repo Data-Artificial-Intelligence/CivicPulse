@@ -4,6 +4,10 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
+    archive = {
+      source  = "hashicorp/archive"
+      version = "~> 2.4"
+    }
   }
 }
 
@@ -11,23 +15,52 @@ provider "aws" {
   region = "us-east-1"
 }
 
-# 1. S3 Buckets
+# ==========================================
+# 1. S3 Buckets (Data Lake Raw Zone)
+# ==========================================
 resource "aws_s3_bucket" "raw_voter_files" {
   bucket = "civicpulse-raw-voter-files"
+
+  tags = {
+    Environment = "production"
+    Project     = "CivicPulse"
+  }
 }
 
 resource "aws_s3_bucket" "raw_surveys" {
   bucket = "civicpulse-raw-surveys"
+
+  tags = {
+    Environment = "production"
+    Project     = "CivicPulse"
+  }
 }
 
-# 2. SQS Queue
+# ==========================================
+# 2. SQS Queue (Decoupled Ingestion)
+# ==========================================
 resource "aws_sqs_queue" "survey_queue" {
   name                       = "civicpulse-survey-queue"
   visibility_timeout_seconds = 30
-  message_retention_seconds  = 86400
+  message_retention_seconds  = 86400 # 1 day
+
+  tags = {
+    Environment = "production"
+    Project     = "CivicPulse"
+  }
 }
 
-# 3. IAM Role for Lambda
+# ==========================================
+# 3. Lambda Function & IAM (Serverless Processing)
+# ==========================================
+# Automatically zip the Lambda code from the local directory
+data "archive_file" "lambda_zip" {
+  type        = "zip"
+  source_dir  = "${path.module}/../ingestion/lambda_functions/sqs_to_s3_processor"
+  output_path = "${path.module}/lambda_function.zip"
+}
+
+# IAM Role for Lambda with Least Privilege
 resource "aws_iam_role" "lambda_exec_role" {
   name = "civicpulse_lambda_exec_role"
 
@@ -45,55 +78,52 @@ resource "aws_iam_role" "lambda_exec_role" {
   })
 }
 
-# Attach basic Lambda execution policy
-resource "aws_iam_role_policy_attachment" "lambda_basic" {
-  role       = aws_iam_role.lambda_exec_role.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
-}
-
-# Attach S3 write and SQS read policies to Lambda
-resource "aws_iam_role_policy" "lambda_sqs_s3_permissions" {
-  name = "civicpulse_lambda_sqs_s3_permissions"
+# Attach least-privilege policy (SQS Read/Delete + S3 Write + CloudWatch Logs)
+resource "aws_iam_role_policy" "lambda_s3_sqs_policy" {
+  name = "civicpulse_lambda_s3_sqs_policy"
   role = aws_iam_role.lambda_exec_role.id
 
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
-        # Permission to write processed data to S3
-        Action   = ["s3:PutObject"]
-        Effect   = "Allow"
-        Resource = "${aws_s3_bucket.raw_surveys.arn}/*"
-      },
-      {
-        # Permission to read and manage messages from the SQS queue
-        Action   = [
+        Effect = "Allow"
+        Action = [
           "sqs:ReceiveMessage",
           "sqs:DeleteMessage",
           "sqs:GetQueueAttributes"
         ]
-        Effect   = "Allow"
         Resource = aws_sqs_queue.survey_queue.arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:PutObject",
+          "s3:PutObjectAcl"
+        ]
+        Resource = "${aws_s3_bucket.raw_surveys.arn}/*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = "arn:aws:logs:*:*:*"
       }
     ]
   })
 }
 
-# 4. Lambda Function
-# Note: In a real CI/CD pipeline, you would zip this code and upload it. 
-# For local dev, we point to the directory.
-data "archive_file" "lambda_zip" {
-  type        = "zip"
-  source_dir  = "../ingestion/lambda_functions/sqs_to_s3_processor"
-  output_path = "lambda_function_payload.zip"
-}
-
+# Lambda Function
 resource "aws_lambda_function" "sqs_processor" {
-  filename      = "lambda_function_payload.zip"
-  function_name = "civicpulse_sqs_to_s3_processor"
-  role          = aws_iam_role.lambda_exec_role.arn
-  handler       = "index.lambda_handler"
-  runtime       = "python3.9"
+  function_name    = "civicpulse_sqs_to_s3_processor"
+  role             = aws_iam_role.lambda_exec_role.arn
+  handler          = "index.handler"
+  runtime          = "python3.10"
+  filename         = data.archive_file.lambda_zip.output_path
+  source_code_hash = data.archive_file.lambda_zip.output_base64sha256
 
   environment {
     variables = {
@@ -101,17 +131,33 @@ resource "aws_lambda_function" "sqs_processor" {
     }
   }
 
-  depends_on = [data.archive_file.lambda_zip]
+  timeout     = 30
+  memory_size = 128
+
+  tags = {
+    Environment = "production"
+    Project     = "CivicPulse"
+  }
 }
 
-# 5. SQS Event Source Mapping (Triggers Lambda when messages arrive)
+# ==========================================
+# 4. Event Source Mapping (SQS Trigger)
+# ==========================================
 resource "aws_lambda_event_source_mapping" "sqs_trigger" {
   event_source_arn = aws_sqs_queue.survey_queue.arn
   function_name    = aws_lambda_function.sqs_processor.arn
   batch_size       = 10
 }
 
-# Outputs
+# ==========================================
+# 5. Outputs
+# ==========================================
 output "sqs_queue_url" {
-  value = aws_sqs_queue.survey_queue.url
+  description = "The URL of the SQS queue for the microservice API to send messages to"
+  value       = aws_sqs_queue.survey_queue.url
+}
+
+output "lambda_function_arn" {
+  description = "The ARN of the deployed Lambda function"
+  value       = aws_lambda_function.sqs_processor.arn
 }
