@@ -12,6 +12,13 @@ Write-Host "  - Python virtual environment" -ForegroundColor Gray
 Write-Host "  - Windows Task Scheduler task (CivicPulse Weekly Cleanup)" -ForegroundColor Gray
 Write-Host ""
 
+# Auto-deactivate if currently inside a virtual environment
+if ($env:VIRTUAL_ENV) {
+    Write-Host "[INFO] Virtual environment detected. Deactivating..." -ForegroundColor Yellow
+    deactivate
+    Start-Sleep -Seconds 2
+}
+
 $confirm = Read-Host "Are you sure you want to continue? Type 'yes' to confirm"
 
 if ($confirm -ne "yes") {
@@ -23,7 +30,8 @@ if ($confirm -ne "yes") {
 Write-Host "`n[1] Removing Windows Task Scheduler task..." -ForegroundColor Yellow
 $taskName = "CivicPulse Weekly Cleanup"
 try {
-    $task = Get-ScheduledTask -TaskName $taskName -ErrorAction Stop
+    # Redirect to $null to satisfy linter, we only care if it succeeds or throws
+    $null = Get-ScheduledTask -TaskName $taskName -ErrorAction Stop
     Unregister-ScheduledTask -TaskName $taskName -Confirm:$false | Out-Null
     Write-Host "   [OK] Scheduled task '$taskName' removed." -ForegroundColor Green
 } catch {
@@ -43,20 +51,20 @@ try {
     Write-Host "   [WARNING] Docker compose down failed or no containers to remove." -ForegroundColor Yellow
 }
 
-# 3. Remove dbt Caches (Using absolute paths to prevent null errors)
+# 3. Remove dbt Caches
 Write-Host "`n[3] Removing local dbt caches..." -ForegroundColor Yellow
 $dbtTargetPath = Join-Path $PSScriptRoot "..\pipelines\dbt\target"
 $dbtPackagesPath = Join-Path $PSScriptRoot "..\pipelines\dbt\dbt_packages"
 
 if (Test-Path $dbtTargetPath) {
-    Remove-Item -Recurse -Force $dbtTargetPath
+    Remove-Item -Recurse -Force $dbtTargetPath -ErrorAction SilentlyContinue
     Write-Host "   [OK] Removed: target" -ForegroundColor Green
 } else {
     Write-Host "   [INFO] target folder not found. Skipping." -ForegroundColor Gray
 }
 
 if (Test-Path $dbtPackagesPath) {
-    Remove-Item -Recurse -Force $dbtPackagesPath
+    Remove-Item -Recurse -Force $dbtPackagesPath -ErrorAction SilentlyContinue
     Write-Host "   [OK] Removed: dbt_packages" -ForegroundColor Green
 } else {
     Write-Host "   [INFO] dbt_packages folder not found. Skipping." -ForegroundColor Gray
@@ -66,8 +74,16 @@ if (Test-Path $dbtPackagesPath) {
 Write-Host "`n[4] Removing Python virtual environment..." -ForegroundColor Yellow
 $venvPath = Join-Path $PSScriptRoot "..\.venv"
 if (Test-Path $venvPath) {
-    Remove-Item -Recurse -Force $venvPath
-    Write-Host "   [OK] Removed: .venv" -ForegroundColor Green
+    # Use -ErrorAction SilentlyContinue to bypass minor Windows file lock hiccups
+    Remove-Item -Recurse -Force $venvPath -ErrorAction SilentlyContinue
+    
+    # Double-check if it was actually deleted
+    if (Test-Path $venvPath) {
+        Write-Host "   [WARNING] .venv is locked by a background process." -ForegroundColor Yellow
+        Write-Host "   Please close all terminals/VS Code and manually delete the .venv folder." -ForegroundColor Gray
+    } else {
+        Write-Host "   [OK] Removed: .venv" -ForegroundColor Green
+    }
 } else {
     Write-Host "   [INFO] .venv folder not found. Skipping." -ForegroundColor Gray
 }

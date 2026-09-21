@@ -2,8 +2,19 @@ import streamlit as st
 import duckdb
 import json
 import requests
+import os
+
+from dotenv import load_dotenv
 from requests.auth import HTTPBasicAuth
 from datetime import datetime
+
+# Load project environment variables from .env
+load_dotenv()
+
+# AWS credentials used by DuckDB httpfs when querying S3-backed models
+AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
+AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID", "")
+AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "")
 
 # Configuration
 DB_PATH = "pipelines/dbt/civic_pulse.duckdb"
@@ -17,7 +28,7 @@ st.set_page_config(page_title="CivicPulse Data Portal", page_icon="🏛️", lay
 st.title("🏛️ CivicPulse Internal Data Portal")
 st.markdown("Self-service tool for Data Science and Business Analytics teams to monitor data health, explore the data dictionary, and manage pipeline executions.")
 
-tab1, tab2, tab3 = st.tabs([" Data Quality Dashboard", "📖 Data Dictionary", "⚙️ Pipeline Operations"])
+tab1, tab2, tab3 = st.tabs(["📊 Data Quality Dashboard", "📖 Data Dictionary", "⚙️ Pipeline Operations"])
 
 # ==========================================
 # FEATURE 1: Data Quality Dashboard
@@ -28,6 +39,13 @@ with tab1:
     
     try:
         conn = duckdb.connect(DB_PATH)
+        
+        # Explicitly configure DuckDB to access S3 for views that query it
+        conn.execute("INSTALL httpfs")
+        conn.execute("LOAD httpfs")
+        conn.execute(f"SET s3_region='{AWS_REGION}'")
+        conn.execute(f"SET s3_access_key_id='{AWS_ACCESS_KEY_ID}'")
+        conn.execute(f"SET s3_secret_access_key='{AWS_SECRET_ACCESS_KEY}'")
         
         # Metric 1: Voter ID Completeness
         voter_count = conn.execute("SELECT COUNT(*) FROM dim_voter").fetchone()[0]
@@ -57,7 +75,7 @@ with tab1:
         st.success("✅ All core data quality checks passed based on the latest warehouse state.")
         
     except Exception as e:
-        st.warning("⚠️ Could not connect to data warehouse. Ensure dbt has been run locally (`dbt build`).")
+        st.warning("⚠️ Could not connect to data warehouse. Ensure dbt has been run locally (`dbt build`) and AWS credentials are loaded.")
         st.code(str(e))
 
 # ==========================================
@@ -124,7 +142,7 @@ with tab3:
     with col2:
         run_date = st.date_input("Select logical date for re-run", datetime.now())
     
-    if st.button(" Trigger Manual Re-run", type="primary"):
+    if st.button("🚀 Trigger Manual Re-run", type="primary"):
         with st.spinner(f"Contacting Airflow to trigger `{dag_id}`..."):
             try:
                 # 1. Get the base date selected by the user (e.g., 2026-09-20)
@@ -159,7 +177,7 @@ with tab3:
                 
                 if response.status_code in [200, 201]:
                     st.success(f"✅ Successfully triggered DAG: `{dag_id}`!")
-                    st.info(f" Business Date: {run_date} |  Unique Logical Date: {logical_date_str}")
+                    st.info(f"📅 Business Date: {run_date} | 🕒 Unique Logical Date: {logical_date_str}")
                     with st.expander("View API Response"):
                         st.json(response.json())
                 else:

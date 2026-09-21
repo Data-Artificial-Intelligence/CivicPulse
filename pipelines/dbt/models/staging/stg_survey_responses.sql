@@ -1,11 +1,11 @@
--- Simulates high-velocity microservice survey responses
+{{ config(materialized='view') }}
+
+-- Read partitioned JSON files directly from S3 using DuckDB's httpfs extension
 SELECT 
-    'RESP-001' AS response_id,
-    'VTR-001' AS voter_id,
-    'SRV-001' AS survey_id,
-    0.85 AS sentiment_score, -- 0.0 to 1.0
-    12.5 AS response_time_seconds,
-    '2026-09-15' AS response_date
-UNION ALL
-SELECT 
-    'RESP-002', 'VTR-002', 'SRV-001', 0.45, 8.2, '2026-09-15'
+    message_id AS response_id,
+    voter_id,
+    survey_id,
+    CAST(sentiment_score AS FLOAT) AS sentiment_score,
+    CAST(response_time_seconds AS FLOAT) AS response_time_seconds,
+    CAST(ingestion_timestamp AS TIMESTAMP) AS response_date
+FROM read_json_auto('s3://civicpulse-raw-surveys/raw_surveys/date=*/survey_*.json')
