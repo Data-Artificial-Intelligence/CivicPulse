@@ -1,11 +1,11 @@
--- Simulates raw voter file data from S3
+{{ config(materialized='view') }}
+
+-- Read partitioned Parquet files directly from S3 using DuckDB's httpfs extension
+-- Note: year and county are partition columns, automatically available in the query
 SELECT 
-    'VTR-001' AS voter_id,
-    'John' AS first_name,
-    'Doe' AS last_name,
-    'Active' AS registration_status,
-    'Democrat' AS party_affiliation,
-    'GEO-101' AS geography_id
-UNION ALL
-SELECT 
-    'VTR-002', 'Jane', 'Smith', 'Active', 'Independent', 'GEO-102'
+    voter_id,
+    registration_status,
+    party_affiliation,
+    year,
+    county
+FROM read_parquet('s3://civicpulse-raw-voter-files/year=*/county=*/data.parquet')

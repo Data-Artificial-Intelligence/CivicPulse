@@ -23,7 +23,7 @@ default_args = {
 with DAG(
     dag_id="dag_survey_microservice_processing",
     start_date=datetime(2026, 9, 1),
-    schedule_interval=None,
+    schedule_interval="@daily",
     catchup=False,
     default_args=default_args,
     tags=["civicpulse", "microservice", "survey_data"],
@@ -35,8 +35,8 @@ with DAG(
         bucket_key="raw_surveys/date=*/survey_*.json",
         wildcard_match=True,
         aws_conn_id="aws_default",
-        timeout=60 * 60,
-        poke_interval=60,
+        timeout=24*60 * 60,
+        poke_interval=300,
     )
 
     survey_dbt_run = DbtTaskGroup(

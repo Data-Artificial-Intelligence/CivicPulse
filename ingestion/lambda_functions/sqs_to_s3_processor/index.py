@@ -30,7 +30,7 @@ def lambda_handler(event, context):
                 continue
 
             # 3. Generate a unique S3 key with date partitioning
-            date_str = datetime.now().strftime("%Y/%m/%d")
+            date_str = datetime.now().strftime("%Y-%m-%d")
             message_id = body.get("message_id", "unknown")
             s3_key = f"raw_surveys/date={date_str}/survey_{message_id}.json"
 

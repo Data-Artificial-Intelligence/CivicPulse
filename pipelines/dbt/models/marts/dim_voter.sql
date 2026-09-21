@@ -1,11 +1,14 @@
-WITH staged AS (
-    SELECT * FROM {{ ref('stg_voters') }}
-)
+{{ config(materialized='table') }}
+
+-- Dimension table for voters
+-- Built from staged voter data from S3
 SELECT 
     voter_id,
-    first_name,
-    last_name,
     registration_status,
     party_affiliation,
-    geography_id
-FROM staged
+    year,
+    county,
+    -- Create a composite key for the dimension
+    {{ dbt_utils.generate_surrogate_key(['voter_id', 'year']) }} AS voter_dim_id,
+    CURRENT_TIMESTAMP AS created_at
+FROM {{ ref('stg_voters') }}
