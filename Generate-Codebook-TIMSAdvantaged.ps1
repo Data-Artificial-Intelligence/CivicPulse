@@ -47,7 +47,8 @@ $ExcludedFiles = @(
     "Pipfile.lock",
     "poetry.lock",
     "db.sqlite3",
-    ".secrets.toml", 
+    ".secrets.toml",
+    ".env", 
     "Codebase.md",
     "Codebase.pdf"
 )
