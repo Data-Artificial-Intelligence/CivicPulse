@@ -48,8 +48,8 @@ logs/
 .user.yml
 
 # Helper scripts
-Codebase.md
-Generate-Codebook-TIMSAdvantaged.ps1
+# Codebase.md
+# Generate-Codebook-TIMSAdvantaged.ps1
 
 
 # Lambda build artifacts

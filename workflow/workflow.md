@@ -78,8 +78,8 @@ Before starting, ensure you have the following installed on your machine:
    ```powershell
    python ingestion/batch_voter_pipeline.py
    ```
-2. Unpause `dag_voter_batch_processing` (Scheduled `@daily`) -> in the Airflow UI at `http://localhost:8080`- Unpause DAG** by toggling the switch to **ON** (blue): (auto triggers first time)
-3. This script partitions the data and uploads it as Parquet files to the `civicpulse-raw-voter-files` bucket.
+2. This script partitions the data and uploads it as Parquet files to the `civicpulse-raw-voter-files` bucket.
+3. Unpause `dag_voter_batch_processing` (Scheduled `@daily`) -> in the Airflow UI at `http://localhost:8080`- Unpause DAG** by toggling the switch to **ON** (blue): (auto triggers first time)
 4. The `dag_voter_batch_processing` DAG (scheduled `@daily`) will automatically pick up this new data during its next scheduled run, or you can **manually trigger** it in the Airflow UI to process it immediately.
 
 ---
