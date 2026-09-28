@@ -20,10 +20,11 @@
 
 ### Survey response data model
 ![survey_response_data_model](docs/survey_response_data_model.png)
-![survey_response_data_model](docs/survey_response_data_model.pdf)
+
+[survey_response_data_model](docs/survey_response_data_model.pdf)
 
 ##  Video Presentation
 [Watch the 60-minute project presentation](workflow/2026-09-27%2017-36-00-civicpulse.mp4)
 
 ### Workflow
-![workflow](workflow/workflow.md)
+[workflow](workflow/workflow.md)
