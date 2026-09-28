@@ -19,8 +19,8 @@
 ![beautiful_lineage_graph_artifact](docs/beautiful_lineage_graph_artifact.png)
 
 ### Survey response data model
-![survey_response_data_model](docs/survey_response_data_model-2026-09-18-162456.png)
-![survey_response_data_model](docs/survey_response_data_model-2026-09-18-162509.pdf)
+![survey_response_data_model](docs/survey_response_data_model.png)
+![survey_response_data_model](docs/survey_response_data_model.pdf)
 
 ##  Video Presentation
 [Watch the 60-minute project presentation](workflow/2026-09-27%2017-36-00-civicpulse.mp4)
